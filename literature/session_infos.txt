@@ -1,0 +1,27 @@
+### INDEX & SESSION INFOS ---------------------------------------------------
+
+
+### Xetra Vienna --------------------------------
+
+https://www.wienerborse.at/en/trading/trading-information/trading-hours/
+
+# ATX constituents 
+https://www.wienerborse.at/en/indices/index-values/composition/?ISIN=AT0000999982&ID_NOTATION=92866
+
+
+
+### Xetra Frankfurt -----------------------------
+
+https://www.xetra.com/xetra-en/trading/trading-models/auctionschedule
+
+# DAX cosntituents
+http://en.boerse-frankfurt.de/index/constituents/DAX#Constituents
+
+
+
+### WSE Warsaw ----------------------------------
+
+https://www.gpw.pl/session-details
+
+# WIG20 constituents
+https://www.gpw.pl/index-factsheet?isin=PL9999999987
