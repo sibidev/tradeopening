@@ -7,15 +7,15 @@ library(xgboost)
 
 plan(multiprocess)
 
-source("backtest.R")
-source("data.R")
-source("train_lasso.R")
-source("train_xgboost.R")
+source("R/backtest.R")
+source("R/data.R")
+source("R/train_lasso.R")
+source("R/train_xgboost.R")
 
 
 
 dax_equities <- list.files(
-  "./usecase/",
+  "./data/",
   full.names = TRUE,
   pattern = "\\.csv$"
 ) %>%
@@ -40,7 +40,7 @@ dax_titles <-
 
 
 train_data <-
-  dax_equities %>% 
+  dax_equities %>%
   map(~ filter(.x, Date < "2018-01-01")) %>%
   prepare_data() %>%
   reduce(rbind)
@@ -74,7 +74,7 @@ xgboost_model <-
   train_xgb()
 
 
-returns <- 
+returns <-
   test_data %>%
   get_backtesting_data(lasso_model, xgboost_model, dax_equities) %>%
   map(get_returns)
