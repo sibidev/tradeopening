@@ -13,6 +13,7 @@ library (MASS)
 library(tidyverse)
 library(caret)
 library(xgboost)
+library(lubridate)
 
 
 # ---------------------- Load data from all Files  --------------------------
@@ -67,23 +68,39 @@ nrow(clean_dataset %>% filter(Company  =='null')) #0
 
 
 # Convert numeric columns from Char to Numeric, from Char to Date
-
+# Remove gsub function of ',' removal.
 clean_dataset$Date <- as.Date(clean_dataset$Date)
-clean_dataset$Open <- as.numeric( gsub(",","",clean_dataset$Open)  )
-clean_dataset$High <- as.numeric( gsub(",","",clean_dataset$High)  )
-clean_dataset$Low <- as.numeric( gsub(",","",clean_dataset$Low)  )
-clean_dataset$Close <- as.numeric( gsub(",","",clean_dataset$Close)  )
-clean_dataset$Volume <- as.numeric( gsub(",","",clean_dataset$Volume)  )
-clean_dataset$Adj.Close <- as.numeric( gsub(",","",clean_dataset$Adj.Close)  )
+clean_dataset$Open <- as.numeric( clean_dataset$Open  )
+clean_dataset$High <- as.numeric( clean_dataset$High  )
+clean_dataset$Low <- as.numeric( clean_dataset$Low  )
+clean_dataset$Close <- as.numeric( clean_dataset$Close  )
+clean_dataset$Volume <- as.numeric( clean_dataset$Volume )
+clean_dataset$Adj.Close <- as.numeric( clean_dataset$Adj.Close)
+
+
 
 # check datatypes after conversion
 str(clean_dataset)
 
-# Add 5 Previous Close values in the next day record, grouped by Company.
+# Create e loop to add the previous_close variables
+
+#add current return and previous day return.
+
+
+
+OpeningPerf = log(open / yday_close),
+IntradayPerf = log(close / open)
+
+
+# Add 5 Previous Close, Current Return, Opening Performance, Intraday performance, grouped by Company.
+
+
+
 equities <-
   clean_dataset %>%
     group_by(Company) %>%
       mutate( prev_close = lag( x= Close, n = 1L, default = NA, order_by = Date )  )
+
 
 equities <-
   equities %>%
@@ -112,27 +129,80 @@ equities <-
 
 equities <-
   equities %>%
-  group_by(Company) %>%
-  mutate( prev_close_7 = lag( x= Close, n = 7L, default = NA, order_by = Date )  )
+  group_by( Company ) %>%
+  mutate(  curr_return = ((Close/prev_close )-1)*100  )
 
 equities <-
   equities %>%
-  group_by(Company) %>%
-  mutate( prev_close_8 = lag( x= Close, n = 8L, default = NA, order_by = Date )  )
+  group_by( Company ) %>%
+  mutate(  prev_return = ((prev_close/prev_close_2 )-1)*100  )
 
 equities <-
   equities %>%
-  group_by(Company) %>%
-  mutate( prev_close_9 = lag( x= Close, n = 9L, default = NA, order_by = Date )  )
+  group_by( Company ) %>%
+  mutate(  prev_return_2 = ((prev_close_2/prev_close_3 )-1)*100  )
 
 equities <-
   equities %>%
-  group_by(Company) %>%
-  mutate( prev_close_10 = lag( x= Close, n = 10L, default = NA, order_by = Date )  )
+  group_by( Company ) %>%
+  mutate(  prev_return_3 = ((prev_close_3/prev_close_4 )-1)*100  )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  prev_return_4 = ((prev_close_4/prev_close_5 )-1)*100  )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  prev_return_5 = ((prev_close_5/prev_close_6 )-1)*100  )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  opening_perf = ((Open/prev_close )-1)*100  )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  intraday_perf = ((Close/Open )-1)*100  )
+
 
 equities <-
   equities %>%
   mutate( Direction = ifelse(Close > Open, 1, 0) )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  ma50 = TTR::SMA(prev_close, n = 50)  )
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate(  ma200 = TTR::SMA(prev_close, n = 200)  )
+
+#add volatility
+vol_percent = sd(price) / mean(price)
+
+ret <- log(lag(price)) - log(price)
+vol <- sd(ret) * sqrt(250) * 100
+
+equities <-
+  equities %>%
+  group_by( Company ) %>%
+  mutate( year = year(Date)  ) %>%
+  group_by( year ) %>%
+  mutate(mean =  mean(curr_return)) %>%
+  mutate(  return_volatility = curr_return - mean(curr_return)   )
+
+CON <- equities %>% filter( Company == '1CON' )%>%
+  sd(diff(CON$Close))
+
+?diff
+
+?sd
+################################################################
 
 select(equities, -Direction3)
 
@@ -154,7 +224,10 @@ equities <- equities %>% filter(!is.na(prev_close))%>%
                       filter(!is.na(prev_close_2))%>%
                       filter(!is.na(prev_close_3))%>%
                       filter(!is.na(prev_close_4))%>%
-                      filter(!is.na(prev_close_5))
+                      filter(!is.na(prev_close_5))%>%
+                      filter(!is.na(prev_close_6))%>%
+                      filter(!is.na(ma200))
+
 
 head(equities, n=10)
 
@@ -164,32 +237,43 @@ str(equities)
 
 str(equities_train)
 
-equities$Direction <- as.factor(equities$Direction)
-equities_train$Direction <- as.factor(equities_train$Direction)
-equities_test$Direction <- as.factor(equities_test$Direction)
-
 # create Train & Test datasets
 equities_train <- equities %>% filter( Date < as.Date('2016-01-01'))
 equities_test <- equities %>% filter(Date >= as.Date('2016-01-01'))
 
 
+equities$Direction <- as.factor(equities$Direction)
+equities_train$Direction <- as.factor(equities_train$Direction)
+equities_test$Direction <- as.factor(equities_test$Direction)
+
 
 
 # Model creation: LDA
-lda_fit=lda(Direction ~ prev_close + prev_close_2 ,data=equities_train)
+lda_fit=lda(Direction ~ prev_return + prev_return_2 + prev_return_3 + prev_return_4+
+              prev_return_5 + opening_perf
+            ,data=equities_train)
+# add more features, MA, volatility - how much the price flactuated, SD of the time series
+# difference of past returns
+#work on returns , use returns as predictors, not closing price
+#return = prev_close-prev_close_2 in %
+#diference between last day close and Open.
 
 # Prediction LDA
 lda_pred <- predict (lda_fit , equities_test)
+
 
 # Test LDA model
 table(lda_pred$class, equities_test$Direction)
 lda_confmat <- confusionMatrix(lda_pred$class ,as.factor(equities_test$Direction))
 lda_confmat$overall
 
+
+
+
+
 # Model Creation: QDA
-qda_fit <- qda(Direction ~ prev_close + prev_close_2  +prev_close_3 + prev_close_4+
-                prev_close_5 + prev_close_6 + prev_close_7 + prev_close_8+
-                 prev_close_9+ prev_close_9 + prev_close_10
+qda_fit <- qda(Direction ~ prev_return + prev_return_2 + prev_return_3 + prev_return_4+
+                 prev_return_5 + opening_perf
                , data=equities_train   )
 
 # Prediction QDA
@@ -209,11 +293,6 @@ levels(equities_test$Direction)
 
 
 
-bstSparse <- xgboost(data = train$data, label = train$label, max.depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
-
-
-
-
 ##Extreme Gradient Boosting
 ##tunegrid.xgbDART <- expand.grid(nrounds = 100, max_depth = 10, eta = 0.7,
 ##                                gamma = 0, subsample = 0.5, colsample_bytree = 0.8,
@@ -225,12 +304,12 @@ cv <- trainControl(method = 'cv', number = 10, classProbs = TRUE, allowParallel 
 str(equities_train)
 
 unique(equities_train$Direction)
-levels(equities_train$Direction) <- c('Down', 'Up')
 
+levels(equities_train$Direction) <- c('Down', 'Up')
 levels(equities_test$Direction) <- c('Down', 'Up')
 
-xgbTree_fit <- caret::train(Direction ~ prev_close + prev_close_2  +prev_close_3 + prev_close_4+
-                              prev_close_5,
+xgbTree_fit <- caret::train(Direction ~ prev_return + prev_return_2 + prev_return_3 + prev_return_4+
+                              prev_return_5 + opening_perf + ma50 + ma200 ,
                             data= equities_train,
                             preProcess = c('center', 'scale'),
                             method = 'xgbTree',
@@ -241,6 +320,9 @@ xgbTree_fit <- caret::train(Direction ~ prev_close + prev_close_2  +prev_close_3
 
 
 varImp(xgbTree_fit)$importance
+
+#remove non important features
+#rerun the models with only the most important features.
 
 xgbTree_pred <- predict(xgbTree_fit, equities_test )
 xgbTree_probs <- predict(xgbTree_fit,equities_test,type="prob")
