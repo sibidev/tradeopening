@@ -1,39 +1,25 @@
+library(DALEX)
+
 get_prediction <- function(test_data, xgboost_model, lasso_model) {
   vals <- test_data %>%
     select(-IntradayPerf) %>%
-    as.matrix
+    as.matrix()
 
   test_data %>%
     mutate(
       xgb = predict(xgboost_model, vals),
-      lasso = c(glmnet::predict.cv.glmnet(
-        lasso_model,
-        vals,
-        s = "lambda.min"
-      )),
-      targets = test_data %>% pull(IntradayPerf)
-    ) %>%
-    mutate(
-      XgbErr = (targets - xgb)^2,
-      LassoErr = (targets - lasso)^2
-    ) %>%
-    mutate(
-      IntraModelDivergence = (XgbErr - LassoErr)^2
+      lasso = glmnet::predict.cv.glmnet(lasso_model, vals, s = "lambda.min"),
+      targets = test_data %>% select(IntradayPerf) %>% c()
     )
 }
 
-
-get_backtesting_data <- function(test_data, lasso_model, xgboost_model, eqs) {
+get_backtesting_data <- function(test_data, lasso_model, xgboost_model, eqs)
   test_data %>%
   map(~ get_prediction(
-    .x,
-    xgboost_model,
-    lasso_model
+    .x, lasso_model = lasso_model, xgboost_model = xgboost_model
   )) %>%
   map(~ .x %>%
-        mutate(
-          PredictedIntradayPerf = (lasso + xgb) / 2
-        )) %>%
+        mutate(PredictedIntradayPerf = (lasso + xgb) / 2)) %>%
   map(~ .x %>%
         mutate(
           Signal = ifelse(
@@ -53,16 +39,14 @@ get_backtesting_data <- function(test_data, lasso_model, xgboost_model, eqs) {
   map(~ .x %>%
         mutate(
           ConstrainedSignal = ifelse(
-             # CloseRollingVola10 < -.5 &
-             IntraModelDivergence < 1,
-             # RollingOpeningPerfAutoCorr50 > 0,
-            Signal,
+            (PredictedIntradayPerf < quantile(OpeningPerf, .2)) ||
+            (PredictedIntradayPerf > quantile(OpeningPerf, .8)),
+            Momentum,
             0
           )
         )) %>%
   map2(eqs, ~ bind_cols(.x, tail(.y, nrow(.x)))) %>%
   map(~ .x %>% mutate(IntradayPerf = log(Close / Open)))
-}
 
 
 
@@ -135,9 +119,9 @@ plot_equity <- function(returns)
     geom_line(aes(y = follow_signal_momentum), color = "cyan") +
     geom_line(aes(y = follow_signal), color = "red") +
     geom_line(aes(y = constrained), color = "green") +
-    geom_line(aes(y = buy_and_hold), color = "darkblue") +
+    geom_line(aes(y = buy_and_hold, color = "darkblue")) +
     ylab("return") +
     theme_bw() +
-    theme(legend.position = "none")
+    theme(legend.position="none")
 
 
