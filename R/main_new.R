@@ -50,10 +50,12 @@ test_data <- # validated against individual equities
   map(~ filter(.x, Date >= "2018-01-01")) %>%
   prepare_data()
 
+
 norm_recency <- train_data$Recency %>% normalize01()
 
 normalize01 <- function(x)
   (x - min(x)) / (max(x) - min(x))
+
 
 lasso_model <-
   train_data %>%
