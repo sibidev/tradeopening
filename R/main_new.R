@@ -51,10 +51,11 @@ test_data <- # validated against individual equities
   prepare_data()
 
 
-norm_recency <- train_data$Recency %>% normalize01()
 
 normalize01 <- function(x)
   (x - min(x)) / (max(x) - min(x))
+
+norm_recency <- train_data$Recency %>% normalize01()
 
 
 lasso_model <-
