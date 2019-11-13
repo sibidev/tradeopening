@@ -5,14 +5,14 @@ train_xgb <- function(data) {
   short_vola <- (data$CloseRollingVola5) - min(data$CloseRollingVola5)
 
 
-  w <- recency - short_vola 
+  w <- recency - short_vola
 
   xgboost::xgboost(
     data = data %>% select(-IntradayPerf) %>% as.matrix(),
     label = data %>% pull(IntradayPerf),
     missing = NA,
     # weight = w - min(w),
-    nrounds = 2^12,
+    nrounds = 2^8,
     metrics = "rmse",
     nthread = 12
   )

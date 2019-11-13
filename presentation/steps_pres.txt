@@ -1,0 +1,30 @@
+1. RMD file
+
+Presentation Outline
+
+*  Present usecase in general – the IDEA  (based on the intro.docx and html rmd)
+
+*  Hypothesis: opening performance  can be used to improve predictions
+
+*  Code + outputs – what are we doing and linking it to the „Pipeline“
+      - training and testing (split of data + reshuffling)
+      - feature transformation(ie. Return features) and feature generation (new variables like moving averages etc)
+
+
+*  Short commentary on the steps – why are we doing it, how it improved the model
+     - simple lm
+     - lasso
+     - threshold introduction (three factors for target var)
+     - adding xgb and mixing
+
+*  variable importance section
+
+*  Plots
+
+*  Results
+
+*  Simple interpretation of the results in terms of cumulative retunrs
+
+*  Best practice approach, take-away message, What does the outcome say about the original hypothesis?
+
+2. If there is some time left, a simple dashboard :)
